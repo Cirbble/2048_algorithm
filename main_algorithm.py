@@ -1,60 +1,82 @@
+"""
+Eric Shi
+2332400
+Robert Vincent
+Programming techniques and applications
+"""
+
+
 from board2048 import board2048
 
 class future_board_states(object):
-    #A class to store future board states as a big tree, allows for easy manipulation of data
-    # at least I hope so :)
+    #A tree like class to manage all possible future board states
     def __init__(self, root: board2048, depth: int, first=False):
-        self.root=root
-        temp=root.get_future()
-        self.depth=depth
+        """Creates a future board state class, taking a board2048 object as a mandatory argument, and the depth as a mandatory argument
+        Make sure to also specify first=True when starting this class
+        The future board state class is basically a tree of trees, with the root being the inputed board2048
+        """
         
+        #Setting the input board as the root of the tree
+        self.root=root
+        
+        #checking for user stupidity 
+        self.depth=depth
+        if type(depth)!=int:
+            raise Exception("The depth is supposed to be an integer")
+        if depth<=0:
+            raise ValueError
+        
+        #creating all the variables
         self.tpoints=0
-        self.points=0
         self.wpoints=0
         self.apoints=0
         self.spoints=0
         self.dpoints=0
+        self.answer=-1
+        
+        #getting all future possibilities
+        temp=root.get_future()
+        
+        #assigning each one into its proper list
         
         self.w=[]
         for i in temp[0]:
-            i=board2048(i)
-            self.w.append(i)
+            temp_board_dir=board2048(i[0])
+            tempaaaa=(temp_board_dir,i[1])
+            self.w.append(tempaaaa)
 
         self.a=[]
         for i in temp[1]:
-            i=board2048(i)
-            self.a.append(i)
+            temp_board_dir=board2048(i[0])
+            tempaaaa=(temp_board_dir,i[1])
+            self.a.append(tempaaaa)
             
         self.s=[]
-        
         for i in temp[2]:
-            i=board2048(i)
-            self.s.append(i)
+            temp_board_dir=board2048(i[0])
+            tempaaaa=(temp_board_dir,i[1])
+            self.s.append(tempaaaa)
 
         self.d=[]    
         for i in temp[3]:
-            i=board2048(i)
-            self.d.append(i)        
-        
+            temp_board_dir=board2048(i[0])
+            tempaaaa=(temp_board_dir,i[1])
+            self.d.append(tempaaaa)        
 
         #calculates the points based on the board2048 class
         #important to do this before generating the next level
         #since then the board2048 class gets turned into future_board_states class
         self.calc_points()
-
         if depth != 1: #while it isn't the lowest level
             self.generate_next_level(depth-1)
-        pass
-        
-        
+
         if depth == 1: 
-            pass
+            pass #load bearing pass statment do not remove
         elif first==False:
             self.calc_partial_points()
-            pass
-        else:
+        elif first==True:
             self.calc_gradient_decent()
-            pass
+        self.find_best_move()
 
     def __str__(self):
         """Turns the board class into a string"""
@@ -79,32 +101,55 @@ class future_board_states(object):
         return(ans)
         pass
     def calc_points(self):
+        """Calculates the point of any given future"""
+        #if a 2 was generated, its points is weighted at 90%
+        #if a 4 was generated, its points is weighted at 10%
+        #so that combined, they add up to 100%
+        
         for i in self.w:
-            self.wpoints+=i.eval_self()
+            if i[1]==2:
+                self.wpoints+=i[0].eval_self()*0.9
+            if i[1]==4:
+                self.wpoints+=i[0].eval_self()*0.1
         for i in self.a:
-            self.apoints+=i.eval_self()
+            if i[1]==2:
+                self.apoints+=i[0].eval_self()*0.9
+            if i[1]==4:
+                self.apoints+=i[0].eval_self()*0.1
         for i in self.s:
-            self.spoints+=i.eval_self()
+            if i[1]==2:
+                self.spoints+=i[0].eval_self()*0.9
+            if i[1]==4:
+                self.spoints+=i[0].eval_self()*0.1
         for i in self.d:
-            self.dpoints+=i.eval_self()
-        self.points=self.wpoints+self.apoints+self.spoints+self.dpoints
+            if i[1]==2:
+                self.dpoints+=i[0].eval_self()*0.9
+            if i[1]==4:
+                self.dpoints+=i[0].eval_self()*0.1
+
+        #adding all the points together into tpoints
+        self.tpoints=self.wpoints+self.apoints+self.spoints+self.dpoints
+        
         pass
     def generate_next_level(self,depth):
+        """Turns each potencial board into another future board state class
+        Extends the tree another depth"""
         for i in range(len(self.w)):
-            self.w[i]=future_board_states(self.w[i],depth-1)
+            self.w[i]=future_board_states(self.w[i][0],depth)
         for i in range(len(self.a)):
-            self.a[i]=future_board_states(self.a[i],depth-1)
+            self.a[i]=future_board_states(self.a[i][0],depth)
         for i in range(len(self.s)):
-            self.s[i]=future_board_states(self.s[i],depth-1)
+            self.s[i]=future_board_states(self.s[i][0],depth)
         for i in range(len(self.d)):
-            self.d[i]=future_board_states(self.d[i],depth-1)
+            self.d[i]=future_board_states(self.d[i][0],depth)
         
         pass
     
     def calc_partial_points(self):
+        """Calculates the points from each child
+        Stores answer in tpoints as an int or float"""
         self.tpoints=0
         for i in self.a:
-            #print(type(i))
             self.tpoints+=i.tpoints
         for i in self.w:
             self.tpoints+=i.tpoints
@@ -114,11 +159,15 @@ class future_board_states(object):
             self.tpoints+=i.tpoints
         pass
     def calc_gradient_decent(self):
+        """Calculates the points from each child
+        Stores answer in respective point catagory
+        Meant to only be used for root board"""
         self.wpoints=0
         self.apoints=0
         self.spoints=0
         self.dpoints=0
         for i in self.a:
+
             self.apoints+=i.tpoints
         for i in self.w:
             self.wpoints+=i.tpoints
@@ -128,21 +177,41 @@ class future_board_states(object):
             self.dpoints+=i.tpoints
     
     def find_best_move(self):
-        max_num=max(self.apoints,self.spoints,self.dpoints,self.wpoints)
-        print(self.apoints,self.spoints,self.dpoints,self.wpoints)
+        """Finds the best move from any given board, store the answer in self.answer"""
+        """Uncomment the print to make it look cool"""
+        #print(self.apoints, self.wpoints, self.spoints, self.dpoints)
+        if self.apoints>=self.wpoints and self.apoints>=self.dpoints and self.apoints>=self.spoints:
+            self.answer="a"
+            pass
+        elif self.spoints>=self.apoints and self.spoints>=self.dpoints and self.spoints>=self.wpoints:
+            self.answer="s"
+        elif self.dpoints>=self.spoints and self.dpoints>=self.apoints and self.dpoints >= self.wpoints:
+            self.answer="d"
+        elif self.wpoints>=self.apoints and self.wpoints>=self.spoints and self.wpoints >= self.dpoints:
+            self.answer="w"
+        else:
+            self.answer=-1
+            print("a very nice word that is not a swear word and would not get me refered to either HR or the dean")
+          
         pass
-
+    
+    
     pass
 
-
 class algor2048(object):
-    def __init__(self, board=-1, sight=5):
+    def __init__(self, board=-1, sight=3):
         """Init creates the class
         Optional argument for a already played board
         Else it creates a new board
         Sight is how many moves into the future the system checks for"""
+        #Note: it takes my around 10 seconds to calculate one iteration with sight 3, increase at your own risk
         if board==-1:
             self.boardstate=board2048()
+        
+        elif isinstance(board, board2048):
+            self.boardstate=board2048(board.board)
+            pass
+        
         else:
             self.boardstate=board2048(board)
         self.sight=sight
@@ -156,89 +225,48 @@ class algor2048(object):
         return(self.boardstate)
     
     def do_move(self,dir):
-        self.boardstate.swipe(dir)
-    
-    def get_future(self):
-        """Returns a list of all future possibilities from each swipe actions
-        The list will have length 4, 
-        pos 0 is w, pos 1 is a, pos 2 is s, and pos 3 is d
-        Each pos is another list of each possibility"""
-        next_move_possibility=[]
-        wboard=board2048(self.boardstate.copy_board())
-        if wboard.swipe("w") != -1:
-            next_move_possibility.append(wboard.find_future())
-        else:
-            next_move_possibility.append([])
-        aboard=board2048(self.boardstate.copy_board())
-        
-        if aboard.swipe("a") != -1:
-            next_move_possibility.append(aboard.find_future())
-        else:
-            next_move_possibility.append([])
+        """does the move to the boardstate"""
+        result = self.boardstate.swipe(dir)
+        return(result)
 
-        sboard=board2048(self.boardstate.copy_board())
-        if sboard.swipe("s") != -1:
-            next_move_possibility.append(sboard.find_future())
-        else:
-            next_move_possibility.append([])
-
-        dboard=board2048(self.boardstate.copy_board())
-        if dboard.swipe("d") != -1:
-            next_move_possibility.append(dboard.find_future())
-        else:
-            next_move_possibility.append([])
-        
-        return(next_move_possibility)
+    def trouver_best_move(self):
+        """Finds the best move"""
+        #print(str(self.boardstate))
+        temp=future_board_states((self.boardstate), self.sight, first=True)
+        return(temp.answer)
         pass
-    def turn_into_points(self, possible):
-        """Temp is a list of all possible board states
-        It is meant to be the list generated by get_future()"""
-        points=[]
-        for i in range(len(possible)):
-            temppoints=0
-            if len(possible[i])!=0:
 
-                for j in range(len(possible[i])):
-                    
-                    #print(possible[i][j])
-                    tempboard=board2048(possible[i][j])
-                    tempval=tempboard.eval_self()
-                    temppoints+=tempval
+    def make_best_move(self):
+        """Does the best move avaible
+        and then generates a new tile
+        """
+        #print(1)
+        best_move=self.trouver_best_move()
+        result=self.do_move(best_move)
+        #print(best_move)
+        if result == -1:
+            raise Exception("welp, the best move doesn't exisit lol good luck figuring out the mistake future me <3")
+        else:
+            #print(self)
+            #print(2)
+            (self.boardstate.gen_new_tile())
+            #print(3)
+            pass
 
-                    
-                    pass
-            else: 
-                temppoints=-1
-            points.append(temppoints)
-        avg=0
-        avg_div=0
-        for i in points:
-            if i != -1:
-                avg+=i
-                avg_div+=1
-        if avg_div==0: #nvm solved it, this case happens when the board is in a dead state
-            return([0,0,0,0])
-            return("wait what the fuck?")
-        avg=avg/avg_div
-        for i in range(len(points)):
-            if points[i] ==-1:
-                points[i]=avg
-        return(points)
+
+    
+    
     pass
 
-
-#a=algor2048()
-#a=algor2048([[2,2,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]])
-#a=algor2048([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
-#print(a)
-#aba=a.get_future()
-#print(len(aba))
-#print(len(aba[0]))
-#print(aba)
-#print(len(aba[0][0]))
-#print(aba)
-#print (a.turn_into_points(aba))
-b=board2048()
-print(b)
-c=future_board_states(b,5)
-c.find_best_move()
+if __name__=="__main__": # a little bit of testing
+    
+    b=board2048()
+    
+    c = algor2048(b)
+    print(type(b))
+    print(type(c.boardstate))
+    print(c)
+    #print(c.find_best_move())
+    c.make_best_move()
+    print(c)
+    
